@@ -1,0 +1,2 @@
+DEBUG = False
+MAX_GRAD_NORM = 0.5
