@@ -7,6 +7,7 @@ class KFoldDataset(Dataset):
         super().__init__()
         self.inner = inner_ds
         self.whitelist = whitelist
+        self.total_labels = self.inner.total_labels
 
     def __len__(self) -> int:
         return len(self.whitelist)

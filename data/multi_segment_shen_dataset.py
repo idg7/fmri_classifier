@@ -2,6 +2,7 @@ from typing import Tuple, List
 
 from torch.utils.data import Dataset
 from torch import LongTensor, Tensor
+import pandas as pd
 from data.shen_dataset import ShenParcelDataset
 
 
@@ -20,6 +21,9 @@ class MultiSegmentShenParcelDataset(Dataset):
         ]
 
         self.total_size = sum([len(segment) for segment in self.segments_datasets])
+
+        self.all_segments_labels = pd.concat([segment.labels for segment in self.segments_datasets])
+        self.total_labels = self.all_segments_labels.unique(label_col)
 
     def __len__(self) -> int:
         return self.total_size
