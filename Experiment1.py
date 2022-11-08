@@ -4,7 +4,7 @@ from training import Coach
 from typing import List, Tuple, Dict
 from os import path
 from consts import SHEN_PARCEL_DIM, MLFLOW_ARTIFACT_STORE, MLFLOW_TRACKING_URI, EXPERIMENT_NAME, MIN_SEQ_LENGTH, SCANS_TR
-from data import get_kfolds
+from data import get_kfolds, merge_consecutive_labels
 from torch import optim, nn
 import numpy as np
 import pandas as pd
@@ -47,8 +47,10 @@ def get_parcels_labels(segments: List[int]) -> Tuple[List[str], List[str], str, 
             subj_idx.append(i)
 
     multi_label = []
-    for segment in range(1,9):
-        multi_label.append(pd.read_csv(path.join(labels_root_path, f'emotions_av_1s_events_run-{segment}_events.tsv'), sep='\t'))
+    for segment in segments:
+        curr_segment = pd.read_csv(path.join(labels_root_path, f'emotions_av_1s_events_run-{segment}_events.tsv'), sep='\t')
+        curr_segment = merge_consecutive_labels(curr_segment, labels_col)
+        multi_label.append(curr_segment)
     
     # Concat all labels and drop all exposures that are too short
     multi_label = pd.concat(multi_label)

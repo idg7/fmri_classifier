@@ -1,11 +1,5 @@
 import torch
-from .kfold_dataset import KFoldDataset
-from .multi_segment_shen_dataset import MultiSegmentShenParcelDataset
-from .multi_fold_dataset import MultiFoldDataset
-from typing import List, Tuple, Dict
-import numpy as np
-from torch.utils.data import DataLoader
-from consts import NUM_WORKERS
+import pandas as pd
 
 
 def collate_fn(batch):
@@ -40,54 +34,27 @@ def collate_fn_diff_size_scans(batch):
     return scans_tensor, subj_id_tensor, labels_tensor    
 
 
-def get_kfolds(k: int, batch_size: int, shen_files: List[str], subj_idx: List[int], labels_files: List[str], label_map: Dict[str, int], label_col: str) -> Tuple[List[DataLoader], List[DataLoader], DataLoader, List[int]]:
-    """
-    Get K fold division of a dataset
-    :param k: The number of folds to split the dataset to
-    :param batch_size: Size of each batch
-    :param shen_files: File paths containing the shen parcelations
-    :param subj_idx: List of subject IDX per shen file
-    :param labels_files: File paths containing the labels for each TR
-    :param label_col: The column containing the actual label
-    :return: (List of training set dataloaders, List of corresponding validation set dataloaders, entire dataset, list of sizes shen parcelation sizes)
-    """
-    entire_ds = MultiSegmentShenParcelDataset(shen_files, subj_idx, labels_files, label_map, label_col)
-    item_indices = np.arange(len(entire_ds))
-    chunks_size = len(entire_ds) // k
+def merge_consecutive_labels(labels: pd.DataFrame, labels_col: str) -> pd.DataFrame:
+    merged = {labels_col: [], 'onset': [], 'duration': []}
+    for i in range(len(labels)):
+        character = labels.iloc[i][labels_col]
+        onset = labels.iloc[i].onset
+        duration = labels.iloc[i].duration
 
-    chunks = [i * chunks_size for i in range(1, k)]
-    np.random.shuffle(item_indices)
-    chunks = np.split(item_indices, chunks)
+        if (len(merged[labels_col]) > 0) \
+            and (merged[labels_col][-1] == character) \
+            and (merged['onset'][-1] + merged['duration'][-1] == labels.iloc[i]['onset']):
 
-    folds = [KFoldDataset(entire_ds, chunk) for chunk in chunks]
-
-    training_sets = []
-    for val_set in folds:
-        training_sets.append(MultiFoldDataset(tuple([fold for fold in folds if fold != val_set])))
-
-    training_sets = [
-        DataLoader(
-            set,
-            batch_size=batch_size,
-            shuffle=True,
-            collate_fn=collate_fn_diff_size_scans,
-            num_workers=NUM_WORKERS)
-        for set in training_sets]
+            # If the next seen character is the same as the previous one
+            # and their both consecutive (onset[i-1] + duration[i-1] == onset[i])
+            # we merge the 2 exposures into one
+            merged['duration'][-1] += labels.iloc[i]['duration']
+        else:
+            # Otherwise we add a new exposure
+            merged[labels_col].append(character)
+            merged['onset'].append(onset)
+            merged['duration'].append(duration)
     
-    validation_sets = [
-        DataLoader(
-            set,
-            batch_size=batch_size,
-            shuffle=True,
-            collate_fn=collate_fn_diff_size_scans,
-            num_workers=NUM_WORKERS)
-        for set in folds]
-    
-    entire_set = DataLoader(
-            entire_ds,
-            batch_size=batch_size,
-            shuffle=True,
-            collate_fn=collate_fn_diff_size_scans,
-            num_workers=NUM_WORKERS)
+    return pd.DataFrame(merged)
 
-    return training_sets, validation_sets, entire_set, entire_ds.get_parcelation_sizes()
+

@@ -1,5 +1,5 @@
 from typing import Tuple, Dict
-
+from .utils import merge_consecutive_labels
 from torch.utils.data import Dataset
 from torch import from_numpy, LongTensor, Tensor
 import pandas as pd
@@ -12,7 +12,7 @@ class ShenParcelDataset(Dataset):
         self.shen_file = shen_file
         self.labels_file = labels_file
         self.scans = pd.read_csv(shen_file)
-        self.labels = pd.read_csv(labels_file, sep=seperator)
+        self.labels = merge_consecutive_labels(pd.read_csv(labels_file, sep=seperator), label_col)
         self.label_col = label_col
         self.classes = self.labels[label_col].unique()
         self.scans_tr = 2 # 2S repetition time (TR) as described in https://www.nature.com/articles/sdata201692
