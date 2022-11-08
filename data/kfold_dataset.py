@@ -1,5 +1,6 @@
 from typing import Tuple, List
 from torch.utils.data import Dataset
+from torch import Tensor, LongTensor
 
 
 class KFoldDataset(Dataset):
@@ -12,5 +13,5 @@ class KFoldDataset(Dataset):
     def __len__(self) -> int:
         return len(self.whitelist)
 
-    def __get__(self, idx: int) -> Tuple:
-        return self.inner[self.whitelist[idx]]
+    def __getitem__(self, idx: int) -> Tuple[Tensor, LongTensor]:
+        return self.inner[idx]

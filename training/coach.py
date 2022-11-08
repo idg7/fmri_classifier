@@ -37,21 +37,21 @@ class Coach(object):
         loss, acc = self.run_epoch(train=False)
         val_loss = loss
         val_acc = acc
-        mlflow.log_metrics({f'{self.fold} Val loss': loss, f'{self.fold} Val acc@1': acc}, step=0)
+        mlflow.log_metrics({f'{self.fold} Val loss': loss, f'{self.fold} Val acc at 1': acc}, step=0)
         self.model.train(True)
-        for i in range(1, epochs+1):
+        for i in range(1, epochs+2):
             # Run a train epoch
             print(f'Epoch={i+1}')
             loss, acc = self.run_epoch(train=True)
-            print(f'{self.fold} Train loss={loss}, Train acc@1={acc}')
-            mlflow.log_metrics({f'{self.fold} Train loss': loss, f'{self.fold} Train acc@1': acc}, step=i)
+            print(f'{self.fold} Train loss={loss}, Train acc at 1={acc}')
+            mlflow.log_metrics({f'{self.fold} Train loss': loss, f'{self.fold} Train acc at 1': acc}, step=i)
             
             # Run a validation epoch
             if i % self.val_freq:
                 print(f'{self.fold} Val epoch={i+1}')
                 loss, acc = self.run_epoch(train=False)
-                print(f'{self.fold} Val loss={loss}, Val acc@1={acc}')
-                mlflow.log_metrics({f'{self.fold} Val loss': loss, f'{self.fold} Val acc@1': acc}, step=i)
+                print(f'{self.fold} Val loss={loss}, Val acc at 1={acc}')
+                mlflow.log_metrics({f'{self.fold} Val loss': loss, f'{self.fold} Val acc at 1': acc}, step=i)
                 val_loss = loss
                 val_acc = acc
         return val_loss, val_acc
@@ -61,32 +61,34 @@ class Coach(object):
         dataset = self.train_dataset
         if not train:
             dataset = self.val_dataset
-        with torch.requires_grad(train):
+        with torch.set_grad_enabled(train):
             epoch_len = min(self.max_epoch_len, len(dataset))
-            avg_loss, avg_acc = 0
+            avg_loss, avg_acc = 0, 0
             data_loader_iter = iter(dataset)
             pbar = tqdm(range(epoch_len))
             for _ in pbar:
-                x, y = next(data_loader_iter)
-                batch_loss, batch_acc = self.train_batch(self, x, y)
+                x, subj_idx, y = next(data_loader_iter)
+                batch_loss, batch_acc = self.train_batch(x, subj_idx, y)
                 pbar.set_description(f'Loss={batch_loss}, Acc={batch_acc}')
                 avg_loss += batch_loss / epoch_len
                 avg_acc += batch_acc / epoch_len
             return avg_loss, avg_acc
 
-    def train_batch(self, x, y):
+    def train_batch(self, x, subj_idx, y):
         if should_use_cuda():
-            x.cuda(non_blocking=True)
+            for scan in x:
+                scan.cuda(non_blocking=True)
             y.cuda(non_blocking=True)
-        y_hat = self.model(x)
+        y_hat = self.model(x, subj_idx)
 
         # Calculate acc@1
         _, preds = torch.max(y_hat, 1)
         batch_acc = torch.sum(preds == y.data).item() / y.shape[0]
 
         self.model.zero_grad()
+        loss = self.criterion(y_hat, y)
+        
         if self.model.training:
-            loss = self.criterion(y_hat, y)
             loss.backward()
             if self.clip_grad_norm:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), consts.MAX_GRAD_NORM)

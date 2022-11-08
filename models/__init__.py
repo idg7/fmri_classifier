@@ -1,1 +1,2 @@
 from models.transformer_decoder_classifier import TransformerDecoderClassifier
+from models.individual_model_decoder import IndividualModelDecoder
