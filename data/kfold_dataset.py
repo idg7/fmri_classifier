@@ -14,4 +14,4 @@ class KFoldDataset(Dataset):
         return len(self.whitelist)
 
     def __getitem__(self, idx: int) -> Tuple[Tensor, LongTensor]:
-        return self.inner[idx]
+        return self.inner[self.whitelist[idx]]

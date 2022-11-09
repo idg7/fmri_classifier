@@ -18,11 +18,11 @@ def get_args():
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--n_attn_heads', type=int, default=8)
     parser.add_argument('--lr', type=int, default=1e-5)
-    parser.add_argument('--lr_reduce_step_size', type=int, default=80)
+    parser.add_argument('--lr_reduce_step_size', type=int, default=5)
     parser.add_argument('--val_freq', type=int, default=10)
     parser.add_argument('--max_epoch_len', type=int, default=1000)
-    parser.add_argument('--num_epochs', type=int, default=120)
-    parser.add_argument('--rnn_num_layers', type=int, default=8)
+    parser.add_argument('--num_epochs', type=int, default=10)
+    parser.add_argument('--rnn_num_layers', type=int, default=4)
 
     return parser.parse_args()
 
@@ -89,13 +89,13 @@ def get_phase_model(training_folds, validation_folds, entire_train, outside_val,
         fold_acc.append(acc)
     print(f'{args.kfolds} folds: Mean loss={np.mean(fold_loss)}, mean acc={np.mean(fold_acc)}')
 
-    mlflow.log_metric(f'{mode_label}, mean {len(training_folds)} loss', np.mean(fold_loss))
-    mlflow.log_metric(f'{mode_label}, mean {len(training_folds)} acc', np.mean(fold_acc))
+    mlflow.log_metric(f'{mode_label} mean {len(training_folds)} fold loss', np.mean(fold_loss))
+    mlflow.log_metric(f'{mode_label} mean {len(training_folds)} fold acc', np.mean(fold_acc))
 
     loss, acc, model = train(entire_train, outside_val, 0, args, subj_segment_sizes)
     print(f'Entire training set, outside validation set: loss={loss}, acc={acc}')
-    mlflow.log_metric(f'{mode_label}, outside validation loss', loss)
-    mlflow.log_metric(f'{mode_label}, outside validation acc', acc)
+    mlflow.log_metric(f'{mode_label} outside validation loss', loss)
+    mlflow.log_metric(f'{mode_label} outside validation acc', acc)
 
 
 def merge_labels_maps(phase1_map: Dict[str, int], phase2_map: Dict[str, int]) -> Dict[str, int]:

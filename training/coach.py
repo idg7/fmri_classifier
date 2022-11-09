@@ -20,6 +20,7 @@ class Coach(object):
                  val_dataset: DataLoader,
                  val_freq: int,
                  max_epoch_len: int,
+                 label: str,
                  fold: Optional[int] = None,
                  clip_grad_norm: bool = False):
         self.model = model
@@ -29,6 +30,7 @@ class Coach(object):
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
         self.max_epoch_len = max_epoch_len
+        self.label = label
         self.clip_grad_norm = clip_grad_norm
         self.val_freq = val_freq
         self.fold = fold
@@ -37,21 +39,21 @@ class Coach(object):
         loss, acc = self.run_epoch(train=False)
         val_loss = loss
         val_acc = acc
-        mlflow.log_metrics({f'{self.fold} Val loss': loss, f'{self.fold} Val acc at 1': acc}, step=0)
+        mlflow.log_metrics({f'{self.label} {self.fold} Val loss': loss, f'{self.label} {self.fold} Val acc at 1': acc}, step=0)
         self.model.train(True)
         for i in range(1, epochs+2):
             # Run a train epoch
             print(f'Epoch={i+1}')
             loss, acc = self.run_epoch(train=True)
             print(f'{self.fold} Train loss={loss}, Train acc at 1={acc}')
-            mlflow.log_metrics({f'{self.fold} Train loss': loss, f'{self.fold} Train acc at 1': acc}, step=i)
+            mlflow.log_metrics({f'{self.label} {self.fold} Train loss': loss, f'{self.label} {self.fold} Train acc at 1': acc}, step=i)
             
             # Run a validation epoch
             if i % self.val_freq:
                 print(f'{self.fold} Val epoch={i+1}')
                 loss, acc = self.run_epoch(train=False)
                 print(f'{self.fold} Val loss={loss}, Val acc at 1={acc}')
-                mlflow.log_metrics({f'{self.fold} Val loss': loss, f'{self.fold} Val acc at 1': acc}, step=i)
+                mlflow.log_metrics({f'{self.label} {self.fold} Val loss': loss, f'{self.label} {self.fold} Val acc at 1': acc}, step=i)
                 val_loss = loss
                 val_acc = acc
         return val_loss, val_acc
