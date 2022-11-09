@@ -18,11 +18,11 @@ def get_args():
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--n_attn_heads', type=int, default=8)
     parser.add_argument('--lr', type=int, default=1e-5)
-    parser.add_argument('--lr_reduce_step_size', type=int, default=80)
+    parser.add_argument('--lr_reduce_step_size', type=int, default=5)
     parser.add_argument('--val_freq', type=int, default=10)
     parser.add_argument('--max_epoch_len', type=int, default=1000)
-    parser.add_argument('--num_epochs', type=int, default=120)
-    parser.add_argument('--rnn_num_layers', type=int, default=8)
+    parser.add_argument('--num_epochs', type=int, default=10)
+    parser.add_argument('--rnn_num_layers', type=int, default=4)
 
     return parser.parse_args()
 
@@ -64,14 +64,14 @@ def get_parcels_labels(segments: List[int]) -> Tuple[List[str], List[str], str, 
     return parcels, labels, labels_col, subj_idx, label_map
 
 
-def train(training_set, validation_set, fold, args, subj_segment_sizes):
+def train(training_set, validation_set, fold, args, subj_segment_sizes, label):
     model = TransformerDecoderClassifier(SHEN_PARCEL_DIM, args.embedding_dim, len(training_set.dataset.total_labels),
                                          args.n_attn_heads, args.rnn_num_layers)
     model = IndividualModelDecoder(subj_segment_sizes, SHEN_PARCEL_DIM, model)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     scheduler = optim.lr_scheduler.StepLR(optimizer, gamma=0.1, step_size=args.lr_reduce_step_size)
     loss_fn = nn.CrossEntropyLoss()
-    coach = Coach(model, optimizer, scheduler, loss_fn, training_set, validation_set, args.val_freq, args.max_epoch_len, fold)
+    coach = Coach(model, optimizer, scheduler, loss_fn, training_set, validation_set, args.val_freq, args.max_epoch_len, label, fold)
     loss, acc = coach.train(args.num_epochs)
     return loss, acc, coach.model
 
@@ -84,18 +84,18 @@ def get_phase_model(training_folds, validation_folds, entire_train, outside_val,
 
     for i, (train_set, val_set) in enumerate(zip(training_folds, validation_folds)):
         print(f"Training fold number {i+1}")
-        loss, acc, _ = train(train_set, val_set, i + 1, args, subj_segment_sizes)
+        loss, acc, _ = train(train_set, val_set, i + 1, args, subj_segment_sizes, mode_label)
         fold_loss.append(loss)
         fold_acc.append(acc)
     print(f'{args.kfolds} folds: Mean loss={np.mean(fold_loss)}, mean acc={np.mean(fold_acc)}')
 
-    mlflow.log_metric(f'{mode_label}, mean {len(training_folds)} loss', np.mean(fold_loss))
-    mlflow.log_metric(f'{mode_label}, mean {len(training_folds)} acc', np.mean(fold_acc))
+    mlflow.log_metric(f'{mode_label} mean {len(training_folds)} fold loss', np.mean(fold_loss))
+    mlflow.log_metric(f'{mode_label} mean {len(training_folds)} fold acc', np.mean(fold_acc))
 
-    loss, acc, model = train(entire_train, outside_val, 0, args, subj_segment_sizes)
+    loss, acc, model = train(entire_train, outside_val, 0, args, subj_segment_sizes, mode_label)
     print(f'Entire training set, outside validation set: loss={loss}, acc={acc}')
-    mlflow.log_metric(f'{mode_label}, outside validation loss', loss)
-    mlflow.log_metric(f'{mode_label}, outside validation acc', acc)
+    mlflow.log_metric(f'{mode_label} outside validation loss', loss)
+    mlflow.log_metric(f'{mode_label} outside validation acc', acc)
 
 
 def merge_labels_maps(phase1_map: Dict[str, int], phase2_map: Dict[str, int]) -> Dict[str, int]:
