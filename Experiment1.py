@@ -33,8 +33,8 @@ def get_parcels_labels(segments: List[int]) -> Tuple[List[str], List[str], str, 
     :param segments: A list of segment indices
     :return: (List of Shen parcelations file paths, List of labels file paths, Label column)
     """
-    parcels_root_path = '/home/hdd_storage/forrest/studyforrest-data/derivative/aggregate_fmri_timeseries'
-    labels_root_path = '/home/hdd_storage/forrest/studyforrest-data-annotations/segments/avmovie'
+    parcels_root_path = '/galitylab/data/studyforrest-data/derivative/aggregate_fmri_timeseries'
+    labels_root_path = '/galitylab/data/studyforrest-data-annotations/segments/avmovie'
     parcels = []
     labels = []
     labels_col = 'character'
