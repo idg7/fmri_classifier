@@ -3,7 +3,7 @@ from models import TransformerDecoderClassifier, IndividualModelDecoder
 from training import Coach
 from typing import List, Tuple, Dict
 from os import path
-from consts import SHEN_PARCEL_DIM, MLFLOW_ARTIFACT_STORE, MLFLOW_TRACKING_URI, EXPERIMENT_NAME, MIN_SEQ_LENGTH, SCANS_TR
+from consts import SHEN_PARCEL_DIM, MLFLOW_ARTIFACT_STORE, MLFLOW_TRACKING_URI, EXPERIMENT_NAME, MIN_SEQ_LENGTH, SCANS_TR, LABELS_ROOT_PATH, PARCELS_ROOT_PATH
 from data import get_kfolds, merge_consecutive_labels
 from torch import optim, nn
 import numpy as np
@@ -33,8 +33,8 @@ def get_parcels_labels(segments: List[int]) -> Tuple[List[str], List[str], str, 
     :param segments: A list of segment indices
     :return: (List of Shen parcelations file paths, List of labels file paths, Label column)
     """
-    parcels_root_path = '/galitylab/data/studyforrest-data/derivative/aggregate_fmri_timeseries'
-    labels_root_path = '/galitylab/data/studyforrest-data-annotations/segments/avmovie'
+    parcels_root_path = PARCELS_ROOT_PATH
+    labels_root_path = LABELS_ROOT_PATH
     parcels = []
     labels = []
     labels_col = 'character'
