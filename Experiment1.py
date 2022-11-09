@@ -64,14 +64,14 @@ def get_parcels_labels(segments: List[int]) -> Tuple[List[str], List[str], str, 
     return parcels, labels, labels_col, subj_idx, label_map
 
 
-def train(training_set, validation_set, fold, args, subj_segment_sizes):
+def train(training_set, validation_set, fold, args, subj_segment_sizes, label):
     model = TransformerDecoderClassifier(SHEN_PARCEL_DIM, args.embedding_dim, len(training_set.dataset.total_labels),
                                          args.n_attn_heads, args.rnn_num_layers)
     model = IndividualModelDecoder(subj_segment_sizes, SHEN_PARCEL_DIM, model)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     scheduler = optim.lr_scheduler.StepLR(optimizer, gamma=0.1, step_size=args.lr_reduce_step_size)
     loss_fn = nn.CrossEntropyLoss()
-    coach = Coach(model, optimizer, scheduler, loss_fn, training_set, validation_set, args.val_freq, args.max_epoch_len, fold)
+    coach = Coach(model, optimizer, scheduler, loss_fn, training_set, validation_set, args.val_freq, args.max_epoch_len, label, fold)
     loss, acc = coach.train(args.num_epochs)
     return loss, acc, coach.model
 
@@ -84,7 +84,7 @@ def get_phase_model(training_folds, validation_folds, entire_train, outside_val,
 
     for i, (train_set, val_set) in enumerate(zip(training_folds, validation_folds)):
         print(f"Training fold number {i+1}")
-        loss, acc, _ = train(train_set, val_set, i + 1, args, subj_segment_sizes)
+        loss, acc, _ = train(train_set, val_set, i + 1, args, subj_segment_sizes, mode_label)
         fold_loss.append(loss)
         fold_acc.append(acc)
     print(f'{args.kfolds} folds: Mean loss={np.mean(fold_loss)}, mean acc={np.mean(fold_acc)}')
@@ -92,7 +92,7 @@ def get_phase_model(training_folds, validation_folds, entire_train, outside_val,
     mlflow.log_metric(f'{mode_label} mean {len(training_folds)} fold loss', np.mean(fold_loss))
     mlflow.log_metric(f'{mode_label} mean {len(training_folds)} fold acc', np.mean(fold_acc))
 
-    loss, acc, model = train(entire_train, outside_val, 0, args, subj_segment_sizes)
+    loss, acc, model = train(entire_train, outside_val, 0, args, subj_segment_sizes, mode_label)
     print(f'Entire training set, outside validation set: loss={loss}, acc={acc}')
     mlflow.log_metric(f'{mode_label} outside validation loss', loss)
     mlflow.log_metric(f'{mode_label} outside validation acc', acc)
