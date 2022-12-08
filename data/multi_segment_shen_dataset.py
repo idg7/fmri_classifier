@@ -7,7 +7,9 @@ from data.shen_dataset import ShenParcelDataset
 
 
 class MultiSegmentShenParcelDataset(Dataset):
-    def __init__(self, shen_files: List[str], subj_idx: List[int], labels_files: List[str], label_map: Dict[str, int], label_col: str, segment_total_time: int = 15 * 60, seperator='\t'):
+    def __init__(self, shen_files: List[str], subj_idx: List[int], 
+    labels_files: List[str], label_map: Dict[str, int], label_col: str, 
+    max_seq_length: int = -1 ,segment_total_time: int = 15 * 60, seperator='\t'):
         super().__init__()
         assert(len(shen_files) == len(labels_files))
 
@@ -18,7 +20,7 @@ class MultiSegmentShenParcelDataset(Dataset):
                 label_col,
                 subj_idx[i], label_map,
                 total_time=segment_total_time,
-                seperator=seperator) for i in range(len(shen_files))
+                seperator=seperator, max_seq_length=max_seq_length) for i in range(len(shen_files))
         ]
 
         self.total_size = sum([len(segment) for segment in self.segments_datasets])

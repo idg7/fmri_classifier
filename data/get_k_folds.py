@@ -5,10 +5,13 @@ from typing import List, Tuple, Dict
 import numpy as np
 from torch.utils.data import DataLoader
 from consts import NUM_WORKERS
-from .utils import collate_fn_diff_size_scans
+from .utils import collate_fn_diff_size_scans, collate_fn_not_seq
 
 
-def get_kfolds(k: int, batch_size: int, shen_files: List[str], subj_idx: List[int], labels_files: List[str], label_map: Dict[str, int], label_col: str) -> Tuple[List[DataLoader], List[DataLoader], DataLoader, List[int]]:
+def get_kfolds(k: int, batch_size: int, 
+                shen_files: List[str], subj_idx: List[int], 
+                labels_files: List[str], label_map: Dict[str, int], 
+                label_col: str, max_seq_length: int = -1, use_mlp: bool = False) -> Tuple[List[DataLoader], List[DataLoader], DataLoader, List[int]]:
     """
     Get K fold division of a dataset
     :param k: The number of folds to split the dataset to
@@ -19,7 +22,12 @@ def get_kfolds(k: int, batch_size: int, shen_files: List[str], subj_idx: List[in
     :param label_col: The column containing the actual label
     :return: (List of training set dataloaders, List of corresponding validation set dataloaders, entire dataset, list of sizes shen parcelation sizes)
     """
-    entire_ds = MultiSegmentShenParcelDataset(shen_files, subj_idx, labels_files, label_map, label_col)
+    collate_fn = collate_fn_diff_size_scans
+    if use_mlp:
+        max_seq_length = 1
+        collate_fn = collate_fn_not_seq
+
+    entire_ds = MultiSegmentShenParcelDataset(shen_files, subj_idx, labels_files, label_map, label_col, max_seq_length=max_seq_length)
     item_indices = np.arange(len(entire_ds))
     chunks_size = len(entire_ds) // k
 
@@ -38,7 +46,7 @@ def get_kfolds(k: int, batch_size: int, shen_files: List[str], subj_idx: List[in
             set,
             batch_size=batch_size,
             shuffle=True,
-            collate_fn=collate_fn_diff_size_scans,
+            collate_fn=collate_fn,
             num_workers=NUM_WORKERS)
         for set in training_sets]
     
@@ -47,7 +55,7 @@ def get_kfolds(k: int, batch_size: int, shen_files: List[str], subj_idx: List[in
             set,
             batch_size=batch_size,
             shuffle=True,
-            collate_fn=collate_fn_diff_size_scans,
+            collate_fn=collate_fn,
             num_workers=NUM_WORKERS)
         for set in folds]
     
@@ -55,7 +63,7 @@ def get_kfolds(k: int, batch_size: int, shen_files: List[str], subj_idx: List[in
             entire_ds,
             batch_size=batch_size,
             shuffle=True,
-            collate_fn=collate_fn_diff_size_scans,
+            collate_fn=collate_fn,
             num_workers=NUM_WORKERS)
 
     return training_sets, validation_sets, entire_set, entire_ds.get_parcelation_sizes()

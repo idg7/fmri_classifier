@@ -7,7 +7,10 @@ import numpy as np
 
 
 class ShenParcelDataset(Dataset):
-    def __init__(self, shen_file: str, labels_file: str, label_col: str, subj_idx: int, label_map: Dict[str, int], max_seq_length: int = -1, min_seq_length: int = 1, total_time: int = 15 * 60, seperator='\t'):
+    def __init__(self, shen_file: str, labels_file: str, 
+                label_col: str, subj_idx: int, label_map: Dict[str, int], 
+                max_seq_length: int = -1, min_seq_length: int = 1, 
+                total_time: int = 15 * 60, seperator='\t'):
         super().__init__()
         self.shen_file = shen_file
         self.labels_file = labels_file
